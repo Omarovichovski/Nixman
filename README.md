@@ -1,0 +1,2 @@
+# Nixman
+NixOS manager + deployer
