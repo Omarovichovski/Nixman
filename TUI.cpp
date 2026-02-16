@@ -25,10 +25,11 @@ void TUI::showMainMenu() {
     mvprintw(0, 0, "=== NixOS Config Generator - TUI ===");
     mvprintw(2, 0, "1) View/Modify Selected Packages");
     mvprintw(3, 0, "2) Search & Add Packages");
-    mvprintw(4, 0, "3) Global System Settings");
-    mvprintw(5, 0, "4) Generate Configuration");
-    mvprintw(6, 0, "5) Deploy To All Devices");
-    mvprintw(7, 0, "6) Exit");
+    mvprintw(4, 0, "3) Services");  // New option
+    mvprintw(5, 0, "4) Global System Settings");
+    mvprintw(6, 0, "5) Generate Configuration");
+    mvprintw(7, 0, "6) Deploy To All Devices");
+    mvprintw(8, 0, "7) Exit");
 
     int choice = getch();
 
@@ -36,13 +37,14 @@ void TUI::showMainMenu() {
         case '1': viewSelectedPackages(); break;
         case '2': searchAndAddPackages(); break;
         case '3': editGlobalSettings(); break;
-        case '4': {
+        case '4': editServices(); break;
+        case '5': {
             Device dummyDevice;
             generateConfig(dummyDevice);
             break;
         }
-        case '5': break; // TODO: Deploy
-        case '6': endwin(); std::exit(0);
+        case '6': break; // TODO: Deploy
+        case '7': endwin(); std::exit(0);
     }
 }
 
@@ -416,4 +418,55 @@ void TUI::generateConfig(Device& device) {
     mvprintw(0, 0, "Generated configuration:\n%s", config.c_str());
     mvprintw(LINES - 1, 0, "Press any key to return...");
     getch();
+}
+// ======================= Edit Services ========================
+void TUI::editServices() {
+    auto& services = configState.getServices();
+    std::vector<std::string> serviceNames;
+    for (const auto& [name,_] : services) serviceNames.push_back(name);
+    int highlight = 0;
+    bool done = false;
+
+    while(!done) {
+        clear();
+        mvprintw(0,0,"=== Services === (SPACE toggle, a add, d delete, ESC return)");
+        for(size_t i=0;i<serviceNames.size();++i){
+            const std::string& name = serviceNames[i];
+            bool enabled = configState.isServiceEnabled(name);
+            mvprintw(i+2,0,"%s [%c] %s", i==highlight?"->":"  ", enabled?'x':' ', name.c_str());
+        }
+        int ch = getch();
+        switch(ch){
+            case KEY_UP: if(highlight>0) highlight--; break;
+            case KEY_DOWN: if(highlight<(int)serviceNames.size()-1) highlight++; break;
+            case ' ': { // toggle enable
+                std::string& name = serviceNames[highlight];
+                bool current = configState.isServiceEnabled(name);
+                configState.setService(name,!current);
+                break;
+            }
+            case 'a': { // add service
+                echo();
+                char buf[128];
+                mvprintw(LINES-2,0,"Enter new service name: ");
+                getnstr(buf,127);
+                noecho();
+                std::string name(buf);
+                if(!name.empty()){
+                    configState.setService(name,true);
+                    serviceNames.push_back(name);
+                    highlight = serviceNames.size()-1;
+                }
+                break;
+            }
+            case 'd': { // delete service
+                std::string name = serviceNames[highlight];
+                configState.removeService(name);
+                serviceNames.erase(serviceNames.begin()+highlight);
+                if(highlight >= (int)serviceNames.size()) highlight = serviceNames.size()-1;
+                break;
+            }
+            case 27: done=true; break;  // ESC
+        }
+    }
 }

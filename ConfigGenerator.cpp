@@ -41,7 +41,15 @@ std::string ConfigGenerator::generateConfig(const Device& d, const ConfigState& 
         }
         out << "  };\n";
     }
+    // ------------------- Services -------------------
 
+      const auto& services = state.getServices();
+      if (!services.empty()) {
+          for (const auto& [name, enabled] : services) {
+              out << "  services." << name << ".enable = "
+                  << (enabled ? "true" : "false") << ";\n";
+          }
+      }
 
     // ------------------- Packages -------------------
     const auto& packages = state.getPackages();

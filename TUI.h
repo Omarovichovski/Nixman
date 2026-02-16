@@ -14,6 +14,7 @@ private:
     std::vector<NixPackage> selectedPackages;   // Packages selected by user
     ConfigState configState;                     // Global system settings
     NixQuery nixQuery;                           // Package search engine
+    
 
 public:
     void run();                                  // Main loop
@@ -32,6 +33,9 @@ private:
 
     // Search & add packages
     void searchAndAddPackages();                 // Search nixpkgs and add packages
+    
+    // Services
+    void editServices();
 
     // Global system settings
     void editGlobalSettings();                   // Hostname, OpenSSH, custom blocks

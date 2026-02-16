@@ -1,4 +1,5 @@
 #include "ConfigState.h"
+#include <sstream>
 
 // ==================== PACKAGE MANAGEMENT ====================
 void ConfigState::addPackage(const std::string& pkgName, const std::map<std::string, std::string>& options) {
@@ -18,4 +19,17 @@ const std::map<std::string, std::string>& ConfigState::getPackageOptions(const s
     auto it = packages.find(pkgName);
     if (it != packages.end()) return it->second;
     return empty;
+}
+
+// ==================== USERS ========================
+
+std::string ConfigState::getUsers() const {
+    std::ostringstream out;
+    bool first = true;
+    for (const auto& [uname, _] : usersMap) {
+        if (!first) out << ",";
+        out << uname;
+        first = false;
+    }
+    return out.str();
 }

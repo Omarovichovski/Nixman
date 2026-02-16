@@ -25,7 +25,7 @@ private:
     std::string timezone;
     std::string locale;
     bool firewallEnabled = true;
-
+    std::map<std::string, bool> services; // serviceName -> enabled/disabled
     // Users
     std::map<std::string, UserInfo> usersMap;
 
@@ -55,6 +55,14 @@ public:
     void setFirewallEnabled(bool f) { firewallEnabled = f; }
     bool isFirewallEnabled() const { return firewallEnabled; }
 
+    // ============= Service management ==============
+    void setService(const std::string& name, bool enabled) { services[name] = enabled; }
+    void removeService(const std::string& name) { services.erase(name); }
+    bool isServiceEnabled(const std::string& name) const {
+        auto it = services.find(name);
+        return it != services.end() ? it->second : false;
+    }
+    const std::map<std::string,bool>& getServices() const { return services; }
     // ==================== Users ====================
     void setUser(const std::string& username, const UserInfo& info) { usersMap[username] = info; }
     void removeUser(const std::string& username) { usersMap.erase(username); }
