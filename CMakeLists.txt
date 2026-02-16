@@ -10,7 +10,7 @@ list(APPEND CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}")
 # Find ncurses
 find_package(Curses REQUIRED)
 
-# Find nlohmann_json
+# Find nlohmann_json because i ABSOLUTELY do NOT want to manually parse json
 find_package(nlohmann_json REQUIRED)
 
 # Executable
@@ -22,6 +22,7 @@ add_executable(Nixman
     ConfigState.cpp
     NixQuery.cpp
     SSHManager.cpp
+    FileUtils.cpp
     Deployer.cpp
     TUI.cpp
 )

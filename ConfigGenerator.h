@@ -7,7 +7,7 @@
 
 class ConfigGenerator {
 public:
-    std::string generateConfig(const Device& d, const ConfigState& state);
+    static std::string generateConfig(const Device& d, const ConfigState& state);
 };
 
 #endif

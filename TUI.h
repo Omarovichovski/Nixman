@@ -8,12 +8,15 @@
 #include "ConfigGenerator.h"
 #include "NixQuery.h"
 #include "NixPackage.h"
+#include "Inventory.h"
+#include "Deployer.h"
 
 class TUI {
 private:
-    std::vector<NixPackage> selectedPackages;   // Packages selected by user
+    std::vector<NixPackage> selectedPackages;    // Packages selected by user
     ConfigState configState;                     // Global system settings
     NixQuery nixQuery;                           // Package search engine
+    Inventory inventory;                         // Device inventory
     
 
 public:
@@ -36,6 +39,9 @@ private:
     
     // Services
     void editServices();
+
+    // Deployment
+    void deployMenu();
 
     // Global system settings
     void editGlobalSettings();                   // Hostname, OpenSSH, custom blocks

@@ -12,6 +12,8 @@ void TUI::run() {
     noecho();
     keypad(stdscr, TRUE);
 
+    inventory.loadFromFile("devices.json");
+
     while (true) {
         showMainMenu();
     }
@@ -36,14 +38,14 @@ void TUI::showMainMenu() {
     switch (choice) {
         case '1': viewSelectedPackages(); break;
         case '2': searchAndAddPackages(); break;
-        case '3': editGlobalSettings(); break;
-        case '4': editServices(); break;
+        case '3': editServices(); break;
+        case '4': editGlobalSettings(); break;
         case '5': {
             Device dummyDevice;
             generateConfig(dummyDevice);
             break;
         }
-        case '6': break; // TODO: Deploy
+        case '6': deployMenu() break; // TODO: Deploy
         case '7': endwin(); std::exit(0);
     }
 }
@@ -167,7 +169,7 @@ void TUI::editPackageOptions(NixPackage& pkg) {
 void TUI::searchAndAddPackages() {
     echo();
     char query[128];
-    mvprintw(7, 0, "Enter search term: ");
+    mvprintw(9, 0, "Enter search term: ");
     getnstr(query, 127);
     noecho();
 
@@ -467,6 +469,79 @@ void TUI::editServices() {
                 break;
             }
             case 27: done=true; break;  // ESC
+        }
+    }
+}
+
+// ================== Deployment ==================
+
+void TUI::deployMenu() {
+    const auto& devices = inventory.getDevices();
+
+    if (devices.empty()) {
+        clear();
+        mvprintw(0,0,"No devices configured. Press any key...");
+        getch();
+        return;
+    }
+
+    std::vector<bool> selected(devices.size(), true);
+    int highlight = 0;
+    bool done = false;
+
+    while (!done) {
+        clear();
+        mvprintw(0,0,"=== Deploy To Devices === (SPACE toggle, r reverse, ENTER deploy, ESC back)");
+
+        for (size_t i = 0; i < devices.size(); ++i) {
+            if ((int)i == highlight) attron(A_REVERSE);
+            mvprintw(i+2, 0, "[%c] %s (%s@%s)",
+                selected[i] ? 'x' : ' ',
+                devices[i].getName().c_str(),
+                devices[i].getUsername().c_str(),
+                devices[i].getIP().c_str());
+            if ((int)i == highlight) attroff(A_REVERSE);
+        }
+
+        int ch = getch();
+        switch (ch) {
+            case KEY_UP:
+                if (highlight > 0) highlight--;
+                break;
+
+            case KEY_DOWN:
+                if (highlight < (int)devices.size() - 1) highlight++;
+                break;
+
+            case ' ':
+                selected[highlight] = !selected[highlight];
+                break;
+
+            case 'r':
+                for (size_t i = 0; i < selected.size(); ++i)
+                selected[i] = !selected[i];
+
+                break;
+
+            case 10: { // ENTER
+                clear();
+                mvprintw(0,0,"Deploying...");
+                refresh();
+
+                for (size_t i = 0; i < devices.size(); ++i) {
+                    if (selected[i]) {
+                        Deployer::deploy(devices[i], configState);
+                    }
+                }
+
+                mvprintw(2,0,"Done. Press any key.");
+                getch();
+                return;
+            }
+
+            case 27: // ESC
+                done = true;
+                break;
         }
     }
 }

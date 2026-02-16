@@ -1,31 +1,37 @@
 #include "Deployer.h"
-#include <thread>
-#include <vector>
-#include <mutex>
+#include "ConfigGenerator.h"
+#include "FileUtils.h"
+#include <cstdlib>
+#include <iostream>
 
-std::map<std::string, bool> Deployer::deployAll(
-    const Inventory& inventory,
-    ConfigGenerator& generator,
-    SSHManager& ssh,
-    const ConfigState& state
-) {
-    std::map<std::string, bool> results;
-    std::mutex resultMutex;
-    std::vector<std::thread> threads;
+bool Deployer::deploy(const Device& device,
+                      const ConfigState& state)
+{
+    std::cout << "Deploying to: "
+              << device.getName() << "\n";
+    std::string config = ConfigGenerator::generateConfig(device, state);
 
-    for (const auto& device : inventory.getDevices()) {
-        threads.emplace_back([&device, &generator, &ssh, &results, &resultMutex, &state]() {
+    std::string localFile =
+        "./generated-" + device.getName() + ".nix";
 
-            std::string config = generator.generateConfig(device, state);
-            bool success = ssh.deployConfig(device, config);
-
-            std::lock_guard<std::mutex> lock(resultMutex);
-            results[device.getName()] = success;
-        });
+    if (!FileUtils::writeToFile(localFile, config)) {
+        std::cerr << "Failed to write config file\n";
+        return false;
     }
 
-    for (auto& t : threads)
-        t.join();
+    std::string sshTarget =
+        device.getUsername() + "@" + device.getIP();
 
-    return results;
+    std::string command =
+        "nixos-rebuild switch "
+        "--target-host " + sshTarget + " "
+        "-I nixos-config=" + localFile + " "
+        "--use-remote-sudo "
+        "-i " + device.getSSHKeyPath();
+
+    std::cout << "Executing:\n" << command << "\n";
+
+    int result = std::system(command.c_str());
+
+    return result == 0;
 }
