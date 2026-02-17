@@ -24,13 +24,13 @@ void TUI::run() {
 // ==================== Main Menu ====================
 void TUI::showMainMenu() {
     clear();
-    mvprintw(0, 0, "=== NixOS Config Generator - TUI ===");
+    mvprintw(0, 0, "=== NixOS Config Generator & Deployer - Nixman ===");
     mvprintw(2, 0, "1) View/Modify Selected Packages");
     mvprintw(3, 0, "2) Search & Add Packages");
     mvprintw(4, 0, "3) Services");  // New option
     mvprintw(5, 0, "4) Global System Settings");
     mvprintw(6, 0, "5) Generate Configuration");
-    mvprintw(7, 0, "6) Deploy To All Devices");
+    mvprintw(7, 0, "6) Device Deployment");
     mvprintw(8, 0, "7) Exit");
 
     int choice = getch();
@@ -45,7 +45,7 @@ void TUI::showMainMenu() {
             generateConfig(dummyDevice);
             break;
         }
-        case '6': deployMenu() break; // TODO: Deploy
+        case '6': deployMenu(); break; // TODO: Deploy
         case '7': endwin(); std::exit(0);
     }
 }
@@ -491,7 +491,8 @@ void TUI::deployMenu() {
 
     while (!done) {
         clear();
-        mvprintw(0,0,"=== Deploy To Devices === (SPACE toggle, r reverse, ENTER deploy, ESC back)");
+        mvprintw(0,0,"=== Deploy To Devices === (SPACE toggle, a add, e edit, d delete, r reverse, ENTER deploy, ESC back)");
+
 
         for (size_t i = 0; i < devices.size(); ++i) {
             if ((int)i == highlight) attron(A_REVERSE);
@@ -538,6 +539,92 @@ void TUI::deployMenu() {
                 getch();
                 return;
             }
+            case 'a': {
+              echo();
+              char name[128], ip[128], user[128], key[256];
+
+              clear();
+              mvprintw(0,0,"=== Add New Device ===");
+
+              mvprintw(2,0,"Label (name): ");
+              getnstr(name,127);
+
+              mvprintw(3,0,"IP address: ");
+              getnstr(ip,127);
+
+              mvprintw(4,0,"Username: ");
+              getnstr(user,127);
+
+              mvprintw(5,0,"SSH key path: ");
+              getnstr(key,255);
+
+              noecho();
+
+              if (strlen(name) > 0 &&
+                  strlen(ip) > 0 &&
+                  strlen(user) > 0 &&
+                  strlen(key) > 0)
+              {
+                  Device newDevice(name, ip, user, key);
+                  inventory.addDevice(newDevice);
+                  inventory.saveToFile("devices.json");
+
+                  // update UI selection state
+                  selected.push_back(true);
+              }
+
+              break;
+          }
+          case 'd': {
+            if (!devices.empty()) {
+                std::string name = devices[highlight].getName();
+                inventory.removeDevice(name);
+                inventory.saveToFile("devices.json");
+
+                selected.erase(selected.begin() + highlight);
+
+                if (highlight >= (int)selected.size())
+                    highlight = selected.size() - 1;
+            }
+            break;
+          }
+          case 'e': {
+            if (devices.empty()) break;
+
+            echo();
+            char ip[128], user[128], key[256];
+
+            Device old = devices[highlight];
+
+            clear();
+            mvprintw(0,0,"=== Edit Device: %s ===", old.getName().c_str());
+
+            mvprintw(2,0,"IP (%s): ", old.getIP().c_str());
+            getnstr(ip,127);
+
+            mvprintw(3,0,"Username (%s): ", old.getUsername().c_str());
+            getnstr(user,127);
+
+            mvprintw(4,0,"SSH key (%s): ", old.getSSHKeyPath().c_str());
+            getnstr(key,255);
+
+            noecho();
+
+            inventory.removeDevice(old.getName());
+
+            Device updated(
+                old.getName(),
+                strlen(ip) ? ip : old.getIP(),
+                strlen(user) ? user : old.getUsername(),
+                strlen(key) ? key : old.getSSHKeyPath()
+            );
+
+            inventory.addDevice(updated);
+            inventory.saveToFile("devices.json");
+
+            break;
+        }
+
 
             case 27: // ESC
                 done = true;

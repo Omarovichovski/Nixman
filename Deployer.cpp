@@ -9,7 +9,9 @@ bool Deployer::deploy(const Device& device,
 {
     std::cout << "Deploying to: "
               << device.getName() << "\n";
-    std::string config = ConfigGenerator::generateConfig(device, state);
+
+    std::string config =
+        ConfigGenerator::generateConfig(device, state);
 
     std::string localFile =
         "./generated-" + device.getName() + ".nix";
@@ -19,15 +21,24 @@ bool Deployer::deploy(const Device& device,
         return false;
     }
 
+    std::string absolutePath =
+        std::filesystem::absolute(localFile).string();
+
     std::string sshTarget =
         device.getUsername() + "@" + device.getIP();
 
     std::string command =
+        "NIX_SSHOPTS=\"-i " + device.getSSHKeyPath() + "\" "
         "nixos-rebuild switch "
         "--target-host " + sshTarget + " "
-        "-I nixos-config=" + localFile + " "
-        "--use-remote-sudo "
-        "-i " + device.getSSHKeyPath();
+        "--sudo "
+        "-I nixos-config=" + absolutePath;
+    
+    if (!device.getSSHKeyPath().empty()) {
+    command += "NIX_SSHOPTS=\"-i " +
+               device.getSSHKeyPath() +
+               "\" ";
+    }
 
     std::cout << "Executing:\n" << command << "\n";
 
